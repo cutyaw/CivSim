@@ -20,7 +20,6 @@ class World:
             window.addstr(' '.join(row))
             window.addstr('\n')
 
-
 def plot_population_graph(stdscr, population_count_list, title):
     try:
         graph_win = stdscr.subwin(curses.LINES - 1, curses.COLS // 3 - 3, 0, 2 * curses.COLS // 3)
@@ -67,6 +66,10 @@ class Person:
         self.x = x
         self.y = y
         self.age = age
+        self.partner = None
+        self.kids = []
+        self.mental_health = 100
+        self.dead = False
 
     def move(self):
         dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
@@ -74,6 +77,45 @@ class Person:
         new_y = (self.y + dy) % WORLD_SIZE
         self.x = new_x
         self.y = new_y
+
+    def update(self):
+        global kids
+        if self.partner == None: # najit si partnera
+            for person in people:
+                if person.partner == None:
+                    if person.age >= 15 and self.age >= 15 and self.age <= 65 and person.age <= 65:
+                        if abs(self.age - person.age) <= 4:
+                            self.partner = person
+                            person.partner = self
+        else:
+            if len(self.kids) < 3:   #Zkusit udelat deti
+                if random.random() < birth_rate:
+                    nam = random.choice(names)
+                    baby = Person(f'{nam}', self.x, self.y, 0)
+                    self.kids.append(baby)
+                    self.partner.kids.append(baby)
+                    new_people.append(baby)
+                    kids += 1
+
+        self.move()
+        self.grow()
+        self.hurt_mental_health_passively()
+
+        if self.partner != None and self.partner.dead:
+                self.partner.hurt_mental_health()
+                self.partner = None
+    
+        if self.age >= random.randint(70, 100):
+            self.dead = True
+    
+        if self.mental_health == 0: #sebevrazda
+            self.dead = True
+
+    def hurt_mental_health(self):
+        self.mental_health += random.randint(-75, 0)
+
+    def hurt_mental_health_passively(self):
+        self.mental_health += random.randint(-10, 10)
 
     def grow(self):
         self.age += 1
@@ -83,14 +125,26 @@ class Person:
     
 
 start = time.time()
+temp = time.time_ns()
+people = []
+kids = 0
+new_people = []
+birth_rate = 0
+names = None
 def main(stdscr):
+    global temp
+    global people
+    global birth_rate
+    global names
+    global new_people
+    global kids
     curses.curs_set(0)
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     stdscr.clear()
     world = World(WORLD_SIZE)
     names = open("names.txt", "r").read().splitlines()
-    people = []
+
 
     for i in range(3):
         x = random.randint(0, WORLD_SIZE - 1)
@@ -115,21 +169,23 @@ def main(stdscr):
         else:
             birth_rate = random.uniform(0.05, 0.1)
 
-        kids = 0
         new_people = []
+        kids = 0
 
         for person in people:
-            if person.age <= 45 and random.random() < birth_rate:
-                nam = random.choice(names)
-                baby = Person(f'{nam}', person.x, person.y, 0)
-                new_people.append(baby)
-                kids += 1
-            if person.age >= random.randint(70, 100):
+    #        if person.age <= 45 and random.random() < birth_rate:
+    #            nam = random.choice(names)
+    #            sex = Sex(random.choice(list(Sex)))
+    #            baby = Person(f'{nam}', person.x, person.y, 0, sex)
+    #            new_people.append(baby)
+    #            kids += 1
+            if person.dead:
                 death_count += 1
             else:
                 new_people.append(person)
-                person.move()
-                person.grow()
+                #person.move()
+                #person.grow()
+                person.update()
                 world.grid[person.y][person.x] = "X"
 
         people = new_people
@@ -143,7 +199,7 @@ def main(stdscr):
         if people:
             if chaos_mode:
                 stdscr.addstr("CHAOS MODE ON\n", curses.color_pair(1))
-            stdscr.addstr(f"Year: {year}\nPopulation Count: {len(people)}\nOldest Person: {max(people, key=lambda person: person.age)}\nDeath Count: {death_count}\nBirth Rate: {round(birth_rate, 3)}\nBirths this year: {kids}\n{nam} was born\n")
+            stdscr.addstr(f"Year: {year}\nPopulation Count: {len(people)}\nOldest Person: {max(people, key=lambda person: person.age)}\nDeath Count: {death_count}\nBirth Rate: {round(birth_rate, 3)}\nBirths this year: {kids}\n")
             lastyearpop = len(people)
         else:
             stdscr.addstr("Everyone died\n", curses.color_pair(2))
@@ -160,8 +216,7 @@ def main(stdscr):
         #    print(f"Time taken: {stop - start}")
         #    time.sleep(3)
         #    break
-        
-        stdscr.refresh()
+        stdscr.refresh()    
 
 if __name__ == "__main__":
     curses.wrapper(main)
