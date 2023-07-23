@@ -94,7 +94,7 @@ class Person:
                     baby = Person(f'{nam}', self.x, self.y, 0)
                     self.kids.append(baby)
                     self.partner.kids.append(baby)
-                    new_people.append(baby)
+                    people.append(baby)
                     kids += 1
 
         self.move()
@@ -105,7 +105,10 @@ class Person:
                 self.partner.hurt_mental_health()
                 self.partner = None
     
-        if self.age >= random.randint(70, 100):
+        if self.age >= random.randint(80, 100):
+            self.dead = True
+
+        if(random.randint(0, 1000) > 999):
             self.dead = True
     
         if self.mental_health == 0: #sebevrazda
@@ -128,7 +131,6 @@ start = time.time()
 temp = time.time_ns()
 people = []
 kids = 0
-new_people = []
 birth_rate = 0
 names = None
 def main(stdscr):
@@ -136,7 +138,6 @@ def main(stdscr):
     global people
     global birth_rate
     global names
-    global new_people
     global kids
     curses.curs_set(0)
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
@@ -168,28 +169,17 @@ def main(stdscr):
             birth_rate = random.uniform(0.01, 0.05) * (1 - current_population / max_population)
         else:
             birth_rate = random.uniform(0.05, 0.1)
-
-        new_people = []
+        
         kids = 0
 
         for person in people:
-    #        if person.age <= 45 and random.random() < birth_rate:
-    #            nam = random.choice(names)
-    #            sex = Sex(random.choice(list(Sex)))
-    #            baby = Person(f'{nam}', person.x, person.y, 0, sex)
-    #            new_people.append(baby)
-    #            kids += 1
             if person.dead:
                 death_count += 1
+                people.remove(person)
             else:
-                new_people.append(person)
-                #person.move()
-                #person.grow()
+                #new_people.append(person)
                 person.update()
                 world.grid[person.y][person.x] = "X"
-
-        people = new_people
-
 
         stdscr.clear()
         stdscr.addstr('\n')
@@ -216,6 +206,7 @@ def main(stdscr):
         #    print(f"Time taken: {stop - start}")
         #    time.sleep(3)
         #    break
+        #time.sleep(0.01)
         stdscr.refresh()    
 
 if __name__ == "__main__":
